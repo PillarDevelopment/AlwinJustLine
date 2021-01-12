@@ -1,19 +1,6 @@
+pragma solidity ^0.5.12;
 
-// File: contracts/core/MatrixOwnable.sol
-
-pragma solidity ^0.5.0;
-
-
-/**
- * @dev Contract module which provides a basic access control mechanism, where
- * there is an account (an owner) that can be granted exclusive access to
- * specific functions.
- *
- * This module is used through inheritance. It will make available the modifier
- * `onlyOwner`, which can be applied to your functions to restrict their use to
- * the owner.
- */
-contract MatrixOwnable {
+contract Ownable {
     address private _owner;
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
@@ -67,61 +54,107 @@ contract MatrixOwnable {
     }
 }
 
-// File: contracts/interfaces/IPriceController.sol
+interface IERC20 {
+    function totalSupply() external view returns (uint256);
+    function balanceOf(address account) external view returns (uint256);
+    function transfer(address recipient, uint256 amount) external returns (bool);
+    function allowance(address owner, address spender) external view returns (uint256);
+    function approve(address spender, uint256 amount) external returns (bool);
+    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
 
-pragma solidity ^0.5.12;
+    event Transfer(address indexed from, address indexed to, uint256 value);
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+}
 
 interface IPriceController {
 
-    function setPriceProvider(address _newPriceProvider) external;
-    
-    function updateUsdRate(uint256 _newRate) external;
+    function getAllwinUsdRate() external view returns(uint256);
 
-    function getCurrentUsdRate() external view returns(uint256);
+    function getAvailableTokenAddress(uint256 _tokenId) external view returns(IERC20);
 
-    function getTokenID() external view returns(trcToken);
+    function getTokenUSDRate(uint256 _tokenId) external view returns(uint256);
 
 }
 
-// File: contracts/PriceController.sol
+contract PriceController is IPriceController, Ownable {
 
-pragma solidity ^0.5.12;
-
-
-
-
-contract PriceController is IPriceController, MatrixOwnable {
-
-    trcToken private tokenID = 1000495;
+    struct TokenUSDRate {
+        IERC20 token;
+        uint256 usdRate;
+    }
 
     address public priceProvider;
 
-    uint256 private currentUsdRate;
+    uint256 private currentAllwinUSD;
+
+    IERC20 public allwinToken;
+
+    TokenUSDRate[] public tokenUSDRate;
+
+    // 0 - wETH/ethe
+    // 1 - USDT
+
 
     modifier onlyPriceProvider() {
         require(msg.sender == priceProvider, "PriceProvider: caller is not the priceProvider");
         _;
     }
 
-    constructor() public {
+
+    constructor(IERC20 _allwin, IERC20 _weth) public {
         priceProvider = msg.sender;
+        allwinToken = _allwin;
+        tokenUSDRate.push(TokenUSDRate({token:_weth, usdRate:1e15})); // todo
     }
 
-    function setPriceProvider(address _newPriceProvider) external onlyOwner {
+
+    /**
+   */
+    function addNewTokenPrice(uint256 _newPrice, IERC20 _tokenAddress) public onlyPriceProvider {
+        tokenUSDRate.push(TokenUSDRate({token:_tokenAddress, usdRate:_newPrice}));
+    }
+
+
+    /**
+    */
+    function updateAllWInUsdRate(uint256 _newRate) public onlyPriceProvider {
+        currentAllwinUSD = _newRate;
+    }
+
+
+
+    /**
+    */
+    function updateTokenUSDRate(uint256 _tokenID, uint256 _newRate) public onlyPriceProvider {
+        tokenUSDRate[_tokenID].usdRate = _newRate;
+    }
+
+
+    /**
+    */
+    function setPriceProvider(address _newPriceProvider) public onlyOwner {
         priceProvider = _newPriceProvider;
     }
 
-    function updateUsdRate(uint256 _newRate) external onlyPriceProvider {
-        currentUsdRate = _newRate;
+
+    /**
+    */
+    function getAllwinUsdRate() public view returns(uint256) {
+        return currentAllwinUSD;
     }
 
 
-    function getCurrentUsdRate() external view returns(uint256) {
-        return currentUsdRate;
+    /**
+    */
+    function getAvailableTokenAddress(uint256 _tokenId) public view returns(IERC20) {
+        return tokenUSDRate[_tokenId].token;
     }
 
-    function getTokenID() public view returns(trcToken) {
-        return tokenID;
+
+    /**
+    */
+    function getTokenUSDRate(uint256 _tokenId) public view returns(uint256) {
+        return tokenUSDRate[_tokenId].usdRate;
     }
 
 }

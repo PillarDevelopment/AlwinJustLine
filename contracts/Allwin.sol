@@ -323,11 +323,11 @@ interface IWETH {
 
 interface IPriceController {
 
-    function setPriceProvider(address _newPriceProvider) external;
+    function getAllwinUsdRate() external view returns(uint256);
 
-    function updateUsdRate(uint256 _newRate) external;
+    function getAvailableTokenAddress(uint256 _tokenId) external view returns(IERC20);
 
-    function getCurrentUsdRate() external view returns(uint256);
+    function getTokenUSDRate(uint256 _tokenId) external view returns(uint256);
 
 }
 
@@ -572,7 +572,7 @@ contract ERC20 is IERC20 {
     }
 }
 
-contract Alwin {
+contract Allwin {
     struct User {
         uint256 cycle;
         address upline;
