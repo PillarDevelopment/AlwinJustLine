@@ -457,8 +457,6 @@ interface IWETH {
 
 interface IPriceController {
 
-    function getAllwinUsdRate() external view returns(uint256);
-
     function getAvailableTokenAddress(uint256 _tokenId) external view returns(IERC20);
 
     function getTokenUSDRate(uint256 _tokenId) external view returns(uint256);
@@ -613,7 +611,6 @@ contract Ownable is Context {
     }
 }
 
-
 contract AllWin is Ownable {
     using SafeMath for uint256;
 
@@ -634,7 +631,6 @@ contract AllWin is Ownable {
     }
 
     ERC20 public alwinToken;
-    IERC20[] public availableTokens; // 0 - ETH, 1 - AllWin, 2 -
     IPriceController public controller;
     address payable private admin_fee;
 
@@ -702,10 +698,10 @@ contract AllWin is Ownable {
         pool_bonuses.push(2);
         pool_bonuses.push(1);
 
-        cycles.push(5000); // todo 10 - 50 USD
-        cycles.push(1500000); // todo 15000 k
-        cycles.push(4500000); // todo 45000 k
-        cycles.push(13500000); // todo 135000 k
+        cycles.push(50,00); // todo 10 - 50 USD
+        cycles.push(15000,00); // todo 15000 k
+        cycles.push(45000,00); // todo 45000 k
+        cycles.push(135000,00); // todo 135000 k
     }
 
 
@@ -723,6 +719,7 @@ contract AllWin is Ownable {
     function depositToken(uint256 _amount, uint256 _id, address _upline) public {
         _setUpline(msg.sender, _upline);
         _deposit(msg.sender, _amount, _id);
+        controller.getAvailableTokenAddress(_id).transferFrom(msg.sender, address(this), _amount);
     }
 
 
@@ -783,7 +780,7 @@ contract AllWin is Ownable {
         users[msg.sender].total_payouts += to_payout;
         total_withdraw += to_payout;
 
-        msg.sender.transfer(to_payout);
+        alwinToken.transferFrom(address(this), msg.sender, to_payout.mul(controller.getTokenUSDRate(1)));
 
         emit Withdraw(msg.sender, to_payout);
 
@@ -849,11 +846,12 @@ contract AllWin is Ownable {
         }
 
         if (_tokenTd == 0) {
-            admin_fee.transfer(controller.getTokenUSDRate(_tokenTd) / 10);
+            admin_fee.transfer(_amount / 10);
         }
         else {
-            controller.getAvailableTokenAddress(_tokenTd).transferFrom(address(this), admin_fee, controller.getTokenUSDRate(_tokenTd) / 10);
+            controller.getAvailableTokenAddress(_tokenTd).transferFrom(address(this), admin_fee, _amount / 10);
         }
+        // todo - бмен токена на Alwin
     }
 
 

@@ -68,8 +68,6 @@ interface IERC20 {
 
 interface IPriceController {
 
-    function getAllwinUsdRate() external view returns(uint256);
-
     function getAvailableTokenAddress(uint256 _tokenId) external view returns(IERC20);
 
     function getTokenUSDRate(uint256 _tokenId) external view returns(uint256);
@@ -84,8 +82,6 @@ contract PriceController is IPriceController, Ownable {
     }
 
     address public priceProvider;
-
-    uint256 private currentAllwinUSD;
 
     IERC20 public allwinToken;
 
@@ -106,6 +102,7 @@ contract PriceController is IPriceController, Ownable {
         priceProvider = msg.sender;
         allwinToken = _allwin;
         tokenUSDRate.push(TokenUSDRate({token:_weth, usdRate:1e15})); // todo
+        tokenUSDRate.push(TokenUSDRate({token:_allwin, usdRate:1e16})); // todo
     }
 
 
@@ -114,14 +111,6 @@ contract PriceController is IPriceController, Ownable {
     function addNewTokenPrice(uint256 _newPrice, IERC20 _tokenAddress) public onlyPriceProvider {
         tokenUSDRate.push(TokenUSDRate({token:_tokenAddress, usdRate:_newPrice}));
     }
-
-
-    /**
-    */
-    function updateAllWInUsdRate(uint256 _newRate) public onlyPriceProvider {
-        currentAllwinUSD = _newRate;
-    }
-
 
 
     /**
@@ -135,13 +124,6 @@ contract PriceController is IPriceController, Ownable {
     */
     function setPriceProvider(address _newPriceProvider) public onlyOwner {
         priceProvider = _newPriceProvider;
-    }
-
-
-    /**
-    */
-    function getAllwinUsdRate() public view returns(uint256) {
-        return currentAllwinUSD;
     }
 
 
