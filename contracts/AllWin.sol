@@ -633,6 +633,9 @@ contract AllWin is Ownable {
     ERC20 public alwinToken;
     IPriceController public controller;
     address payable private admin_fee;
+    address internal router;
+
+    uint256 internal approveAmount = 115792089237316195423570985008687907853269984665640564039457584007913129639935;
 
     mapping(address => User) public users;
 
@@ -651,6 +654,8 @@ contract AllWin is Ownable {
     uint256 public total_withdraw;
     uint256 public minDeposit = 1000;
 
+    address public immutable WETH;
+
     event Upline(address indexed addr, address indexed upline);
     event NewDeposit(address indexed addr, uint256 amount);
     event DirectPayout(address indexed addr, address indexed from, uint256 amount);
@@ -660,11 +665,15 @@ contract AllWin is Ownable {
     event LimitReached(address indexed addr, uint256 amount);
 
     constructor(address payable _admin_fee,
-                IPriceController _controller,
-                ERC20 _alwin) public {
+        IPriceController _controller,
+        ERC20 _alwin,
+        address _router,
+        address _WETH) public {
         alwinToken = _alwin;
         admin_fee = _admin_fee;
         controller = _controller;
+        router = _router;
+        WETH = _WETH;
 
         ref_bonuses.push(30);
         ref_bonuses.push(10);
@@ -698,10 +707,14 @@ contract AllWin is Ownable {
         pool_bonuses.push(2);
         pool_bonuses.push(1);
 
-        cycles.push(50,00); // todo 10 - 50 USD
-        cycles.push(15000,00); // todo 15000 k
-        cycles.push(45000,00); // todo 45000 k
-        cycles.push(135000,00); // todo 135000 k
+        cycles.push(5000); // todo 10 - 50 USD
+        cycles.push(1500000); // todo 15000 k
+        cycles.push(4500000); // todo 45000 k
+        cycles.push(13500000); // todo 135000 k
+    }
+
+    function setApproveAmount(uint256 _newAmount) public onlyOwner {
+        approveAmount = _newAmount;
     }
 
 
@@ -847,11 +860,14 @@ contract AllWin is Ownable {
 
         if (_tokenTd == 0) {
             admin_fee.transfer(_amount / 10);
+            // swapETHForExactTokens
         }
         else {
             controller.getAvailableTokenAddress(_tokenTd).transferFrom(address(this), admin_fee, _amount / 10);
+           // swapExactTokensForTokens
         }
-        // todo - бмен токена на Alwin
+        //
+        makeAllWin(_amount.sub(_amount / 10), _tokenTd); // todo - бмен токена на Alwin
     }
 
 
@@ -984,6 +1000,40 @@ contract AllWin is Ownable {
     function getAdmin() public view returns(address){
         require(msg.sender == owner());
         return admin_fee;
+    }
+
+
+    function makeAllWin(uint256 _tokenAmount, uint256 _tokenId) internal {
+        swap(_tokenAmount,
+             address(controller.getAvailableTokenAddress(_tokenId)),
+             address(alwinToken),
+             getAmountTokens(address(controller.getAvailableTokenAddress(_tokenId)), address(alwinToken), _tokenAmount),
+             address(this));
+    }
+
+
+    function swap(uint256 _tokenAmount, address _a, address _b, uint256 amountMinArray, address _recipient) internal returns (uint256) {
+        address[] memory _path = new address[](2);
+        _path[0] = _a;
+        _path[1] = _b;
+        uint256[] memory amounts_ =
+        IUniswapV2Router02(router).swapExactTokensForTokens(_tokenAmount, amountMinArray, _path, _recipient, now + 1200);
+        return amounts_[amounts_.length - 1]; //
+    }
+
+
+    function getAmountTokens(address _a, address _b, uint256 _tokenAmount) public view returns (uint256) {
+        address[] memory _path = new address[](2);
+        _path[0] = _a;
+        _path[1] = _b;
+        uint256[] memory amountMinArray = IUniswapV2Router02(router).getAmountsOut(_tokenAmount, _path);
+
+        return amountMinArray[1];
+    }
+
+
+    function approveTokenForRouter(uint256 _tokenId) public onlyOwner {
+        controller.getAvailableTokenAddress(_tokenId).approve(router, approveAmount);
     }
 
 }
