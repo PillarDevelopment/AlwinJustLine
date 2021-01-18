@@ -479,100 +479,27 @@ contract Ownable is Context {
     }
 }
 
-contract ERC20 is IERC20 {
-    using SafeMath for uint256;
+contract AllWinValidator is Ownable {
 
-    mapping (address => uint256) private _balances;
+    ERC20 public alwinToken;
+    IERC20[] public availableTokens; // 0 - ETH, 1 - AllWin, 2 -
+    IPriceController public controller;
 
-    mapping (address => mapping (address => uint256)) private _allowances;
-
-    uint256 private _totalSupply;
-    string private _symbol;
-    uint8 private _decimals;
-
-
-    constructor () public {
-        _symbol = "AllWin";
-        _totalSupply = 100000000000000;
-        _decimals = 6;
-        _balances[0xF4eC08F20134E28C0f61350C6383b6a249234821] = 100000000000000;
-        emit Transfer(address(0), 0xF4eC08F20134E28C0f61350C6383b6a249234821, 100000000000000);
+    function _validatePrice(uint256 _value, uint256 _tokenTd) internal view returns(bool) {
+        if (_value  == ticketPrice.mul(IPriceController.getTokenUSDRate(_tokenTd))) {
+            return true;
+        }
+        else {
+            return false;
+        }
     }
 
-
-    function name() public view returns (string memory) {
-        return _symbol;
-    }
-
-
-    function symbol() public view returns (string memory) {
-        return _symbol;
-    }
-
-
-    function decimals() public view returns (uint8) {
-        return _decimals;
-    }
-
-
-    function totalSupply() public view override returns (uint256) {
-        return _totalSupply;
-    }
-
-
-    function balanceOf(address account) public view override returns (uint256) {
-        return _balances[account];
-    }
-
-
-    function transfer(address recipient, uint256 amount) public virtual override returns (bool) {
-        _transfer(_msgSender(), recipient, amount);
-        return true;
-    }
-
-
-    function allowance(address owner, address spender) public view virtual override returns (uint256) {
-        return _allowances[owner][spender];
-    }
-
-
-    function approve(address spender, uint256 amount) public virtual override returns (bool) {
-        _approve(_msgSender(), spender, amount);
-        return true;
-    }
-
-
-    function transferFrom(address sender, address recipient, uint256 amount) public virtual override returns (bool) {
-        _transfer(sender, recipient, amount);
-        _approve(sender, _msgSender(), _allowances[sender][_msgSender()].sub(amount, "ERC20: transfer amount exceeds allowance"));
-        return true;
-    }
-
-
-    function _transfer(address sender, address recipient, uint256 amount) internal virtual {
-        require(sender != address(0), "ERC20: transfer from the zero address");
-        require(recipient != address(0), "ERC20: transfer to the zero address");
-
-        _balances[sender] = _balances[sender].sub(amount, "ERC20: transfer amount exceeds balance");
-        _balances[recipient] = _balances[recipient].add(amount);
-        emit Transfer(sender, recipient, amount);
-    }
-
-
-    function _approve(address owner, address spender, uint256 amount) internal virtual {
-        require(owner != address(0), "ERC20: approve from the zero address");
-        require(spender != address(0), "ERC20: approve to the zero address");
-
-        _allowances[owner][spender] = amount;
-        emit Approval(owner, spender, amount);
-    }
-
-    function _msgSender() internal view virtual returns (address payable) {
-        return msg.sender;
-    }
 }
 
-contract Allwin {
+
+contract AllWin is AllwinValidator {
+    using SafeMath for uint256;
+
     struct User {
         uint256 cycle;
         address upline;
@@ -589,10 +516,6 @@ contract Allwin {
         uint256 total_structure;
     }
 
-
-    ERC20 public alwinToken;
-    IERC20[] public availableTokens;
-    IPriceController public controller;
 
     address payable private admin_fee;
 
@@ -660,152 +583,32 @@ contract Allwin {
         pool_bonuses.push(2);
         pool_bonuses.push(1);
 
-        cycles.push(1e11); // todo - 6 decimals!!!!!!!!
-        cycles.push(3e11); // todo
-        cycles.push(9e11); // todo
-        cycles.push(2e12); // todo
+        cycles.push(50); // todo 10 - 50 USD
+        cycles.push(15000); // todo 15000 k
+        cycles.push(45000); // todo 45000 k
+        cycles.push(135000); // todo 135000 k
     }
 
+
     function() payable external {
+        //_validatePrice(msg.value, 0);
         _deposit(msg.sender, msg.value);
     }
 
-    function _setUpline(address _addr, address _upline) private {
-        if(users[_addr].upline == address(0) && _upline != _addr && _addr != owner && (users[_upline].deposit_time > 0 || _upline == owner)) {
-            users[_addr].upline = _upline;
-            users[_upline].referrals++;
 
-            emit Upline(_addr, _upline);
-            total_users++;
-
-            for(uint8 i = 0; i < ref_bonuses.length; i++) {
-                if(_upline == address(0)) break;
-
-                users[_upline].total_structure++;
-
-                _upline = users[_upline].upline;
-            }
-        }
-    }
-
-    function _deposit(address _addr, uint256 _amount) private {
-        require(users[_addr].upline != address(0) || _addr == owner, "No upline");
-
-        if(users[_addr].deposit_time > 0) {
-            users[_addr].cycle++;
-
-            require(users[_addr].payouts >= this.maxPayoutOf(users[_addr].deposit_amount), "Deposit already exists");
-            require(_amount >= users[_addr].deposit_amount && _amount <= cycles[users[_addr].cycle > cycles.length - 1 ? cycles.length - 1 : users[_addr].cycle], "Bad amount");
-        }
-        else require(_amount >= 5e7 && _amount <= cycles[0], "Bad amount");
-
-        users[_addr].payouts = 0;
-        users[_addr].deposit_amount = _amount;
-        users[_addr].deposit_payouts = 0;
-        users[_addr].deposit_time = uint40(block.timestamp);
-        users[_addr].total_deposits += _amount;
-
-        total_deposited += _amount;
-
-        emit NewDeposit(_addr, _amount);
-
-        if(users[_addr].upline != address(0)) {
-            users[users[_addr].upline].direct_bonus += _amount / 10;
-
-            emit DirectPayout(users[_addr].upline, _addr, _amount / 10);
-        }
-
-        _pollDeposits(_addr, _amount);
-
-        if(pool_last_draw + 1 days < block.timestamp) {
-            _drawPool();
-        }
-
-        admin_fee.transfer(_amount / 10);
-    }
-
-    function _pollDeposits(address _addr, uint256 _amount) private {
-        pool_balance += _amount * 3 / 100;
-
-        address upline = users[_addr].upline;
-
-        if(upline == address(0)) return;
-
-        pool_users_refs_deposits_sum[pool_cycle][upline] += _amount;
-
-        for(uint8 i = 0; i < pool_bonuses.length; i++) {
-            if(pool_top[i] == upline) break;
-
-            if(pool_top[i] == address(0)) {
-                pool_top[i] = upline;
-                break;
-            }
-
-            if(pool_users_refs_deposits_sum[pool_cycle][upline] > pool_users_refs_deposits_sum[pool_cycle][pool_top[i]]) {
-                for(uint8 j = i + 1; j < pool_bonuses.length; j++) {
-                    if(pool_top[j] == upline) {
-                        for(uint8 k = j; k <= pool_bonuses.length; k++) {
-                            pool_top[k] = pool_top[k + 1];
-                        }
-                        break;
-                    }
-                }
-
-                for(uint8 j = uint8(pool_bonuses.length - 1); j > i; j--) {
-                    pool_top[j] = pool_top[j - 1];
-                }
-
-                pool_top[i] = upline;
-
-                break;
-            }
-        }
-    }
-
-    function _refPayout(address _addr, uint256 _amount) private {
-        address up = users[_addr].upline;
-
-        for(uint8 i = 0; i < ref_bonuses.length; i++) {
-            if(up == address(0)) break;
-
-            if(users[up].referrals >= i + 1) {
-                uint256 bonus = _amount * ref_bonuses[i] / 100;
-
-                users[up].match_bonus += bonus;
-
-                emit MatchPayout(up, _addr, bonus);
-            }
-
-            up = users[up].upline;
-        }
-    }
-
-    function _drawPool() private {
-        pool_last_draw = uint40(block.timestamp);
-        pool_cycle++;
-
-        uint256 draw_amount = pool_balance / 10;
-
-        for(uint8 i = 0; i < pool_bonuses.length; i++) {
-            if(pool_top[i] == address(0)) break;
-
-            uint256 win = draw_amount * pool_bonuses[i] / 100;
-
-            users[pool_top[i]].pool_bonus += win;
-            pool_balance -= win;
-
-            emit PoolPayout(pool_top[i], win);
-        }
-
-        for(uint8 i = 0; i < pool_bonuses.length; i++) {
-            pool_top[i] = address(0);
-        }
-    }
-
-    function deposit(address _upline) payable public {
+    function depositETH(address _upline) payable public {
+        //_validatePrice(msg.value, 0);
         _setUpline(msg.sender, _upline);
         _deposit(msg.sender, msg.value);
     }
+
+
+    function depositToken(uint256 _amount, uint256 _id, address _upline) public {
+       // _validatePrice(_amount, _id);
+        _setUpline(msg.sender, _upline);
+        _deposit(msg.sender, _amount);
+    }
+
 
     function withdraw() public {
         (uint256 to_payout, uint256 max_payout) = this.payoutOf(msg.sender);
@@ -873,9 +676,167 @@ contract Allwin {
         }
     }
 
+
+    function _setUpline(address _addr, address _upline) private {
+        if(users[_addr].upline == address(0) && _upline != _addr && _addr != owner && (users[_upline].deposit_time > 0 || _upline == owner)) {
+            users[_addr].upline = _upline;
+            users[_upline].referrals++;
+
+            emit Upline(_addr, _upline);
+            total_users++;
+
+            for(uint8 i = 0; i < ref_bonuses.length; i++) {
+                if(_upline == address(0)) break;
+
+                users[_upline].total_structure++;
+
+                _upline = users[_upline].upline;
+            }
+        }
+    }
+
+
+    function _deposit(address _addr, uint256 _amount, uint256 _tokenTd) private {
+        require(users[_addr].upline != address(0) || _addr == owner, "No upline");
+
+        if(users[_addr].deposit_time > 0) {
+            users[_addr].cycle++;
+
+            require(users[_addr].payouts >= this.maxPayoutOf(users[_addr].deposit_amount), "Deposit already exists");
+            require(_amount >= users[_addr].deposit_amount.mul(IPriceController.getTokenUSDRate(_tokenTd))
+                && _amount <= cycles[users[_addr].cycle.mul(IPriceController.getTokenUSDRate(_tokenTd)) > cycles.length - 1 ? cycles.length - 1 : users[_addr].cycle], "Bad amount");
+        }
+        else require(_amount >= (10).mul(IPriceController.getTokenUSDRate(_tokenTd))
+            && _amount <= cycles[0].mul(IPriceController.getTokenUSDRate(_tokenTd)), "Bad amount");
+
+        uint256 usdAmount = _amount.div(IPriceController.getTokenUSDRate(_tokenTd));
+        users[_addr].payouts = 0;
+        users[_addr].deposit_amount = _amount.div(IPriceController.getTokenUSDRate(_tokenTd));
+        users[_addr].deposit_payouts = 0;
+        users[_addr].deposit_time = uint40(block.timestamp);
+        users[_addr].total_deposits += _amount.div(IPriceController.getTokenUSDRate(_tokenTd));
+
+        total_deposited += usdAmount;
+
+        emit NewDeposit(_addr, usdAmount);
+
+        if(users[_addr].upline != address(0)) {
+            users[users[_addr].upline].direct_bonus += usdAmount / 10;
+
+            emit DirectPayout(users[_addr].upline, _addr, usdAmount / 10);
+        }
+
+        _pollDeposits(_addr, usdAmount);
+
+        if(pool_last_draw + 1 days < block.timestamp) {
+            _drawPool();
+        }
+
+        if (_tokenTd == 0) {
+            admin_fee.transfer(IPriceController.getTokenUSDRate(_tokenTd) / 10);
+        }
+        else {
+            IPriceController.getAvailableTokenAddress(_tokenTd).transferFrom(address(this), admin_fee, IPriceController.getTokenUSDRate(_tokenTd) / 10);
+        }
+    }
+
+
+    function _pollDeposits(address _addr, uint256 _amount) private {
+        pool_balance += _amount * 3 / 100;
+
+        address upline = users[_addr].upline;
+
+        if(upline == address(0)) return;
+
+        pool_users_refs_deposits_sum[pool_cycle][upline] += _amount;
+
+        for(uint8 i = 0; i < pool_bonuses.length; i++) {
+            if(pool_top[i] == upline) break;
+
+            if(pool_top[i] == address(0)) {
+                pool_top[i] = upline;
+                break;
+            }
+
+            if(pool_users_refs_deposits_sum[pool_cycle][upline] > pool_users_refs_deposits_sum[pool_cycle][pool_top[i]]) {
+                for(uint8 j = i + 1; j < pool_bonuses.length; j++) {
+                    if(pool_top[j] == upline) {
+                        for(uint8 k = j; k <= pool_bonuses.length; k++) {
+                            pool_top[k] = pool_top[k + 1];
+                        }
+                        break;
+                    }
+                }
+
+                for(uint8 j = uint8(pool_bonuses.length - 1); j > i; j--) {
+                    pool_top[j] = pool_top[j - 1];
+                }
+
+                pool_top[i] = upline;
+
+                break;
+            }
+        }
+    }
+
+
+    function _refPayout(address _addr, uint256 _amount) private {
+        address up = users[_addr].upline;
+
+        for(uint8 i = 0; i < ref_bonuses.length; i++) {
+            if(up == address(0)) break;
+
+            if(users[up].referrals >= i + 1) {
+                uint256 bonus = _amount * ref_bonuses[i] / 100;
+
+                users[up].match_bonus += bonus;
+
+                emit MatchPayout(up, _addr, bonus);
+            }
+
+            up = users[up].upline;
+        }
+    }
+
+
+    function _drawPool() private {
+        pool_last_draw = uint40(block.timestamp);
+        pool_cycle++;
+
+        uint256 draw_amount = pool_balance / 10;
+
+        for(uint8 i = 0; i < pool_bonuses.length; i++) {
+            if(pool_top[i] == address(0)) break;
+
+            uint256 win = draw_amount * pool_bonuses[i] / 100;
+
+            users[pool_top[i]].pool_bonus += win;
+            pool_balance -= win;
+
+            emit PoolPayout(pool_top[i], win);
+        }
+
+        for(uint8 i = 0; i < pool_bonuses.length; i++) {
+            pool_top[i] = address(0);
+        }
+    }
+
+
+
+    function _validatePrice(uint256 _value, uint256 _tokenTd) internal view returns(bool) {
+        if (_value  == ticketPrice.mul(IPriceController.getTokenUSDRate(_tokenTd))) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+
     function maxPayoutOf(uint256 _amount) pure public returns(uint256) {
         return _amount * 40 / 10;
     }
+
 
     function payoutOf(address _addr) view public returns(uint256 payout, uint256 max_payout) {
         max_payout = this.maxPayoutOf(users[_addr].deposit_amount);
@@ -891,17 +852,21 @@ contract Allwin {
         }
     }
 
+
     function userInfo(address _addr) view public returns(address upline, uint40 deposit_time, uint256 deposit_amount, uint256 payouts, uint256 direct_bonus, uint256 pool_bonus, uint256 match_bonus) {
         return (users[_addr].upline, users[_addr].deposit_time, users[_addr].deposit_amount, users[_addr].payouts, users[_addr].direct_bonus, users[_addr].pool_bonus, users[_addr].match_bonus);
     }
+
 
     function userInfoTotals(address _addr) view public returns(uint256 referrals, uint256 total_deposits, uint256 total_payouts, uint256 total_structure) {
         return (users[_addr].referrals, users[_addr].total_deposits, users[_addr].total_payouts, users[_addr].total_structure);
     }
 
+
     function contractInfo() view public returns(uint256 _total_users, uint256 _total_deposited, uint256 _total_withdraw, uint40 _pool_last_draw, uint256 _pool_balance, uint256 _pool_lider) {
         return (total_users, total_deposited, total_withdraw, pool_last_draw, pool_balance, pool_users_refs_deposits_sum[pool_cycle][pool_top[0]]);
     }
+
 
     function poolTopInfo() view public returns(address[10] memory addrs, uint256[10] memory deps) {
         for(uint8 i = 0; i < pool_bonuses.length; i++) {

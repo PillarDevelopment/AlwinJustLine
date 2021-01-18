@@ -92,7 +92,8 @@ contract PriceController is IPriceController, Ownable {
     TokenUSDRate[] public tokenUSDRate;
 
     // 0 - wETH/ethe
-    // 1 - USDT
+    // 1 - UAllWin
+    // 2 - USDT
 
 
     modifier onlyPriceProvider() {
