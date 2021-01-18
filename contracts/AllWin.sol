@@ -621,29 +621,23 @@ contract TokenManager is Ownable {
     address internal router;
 
     function swapETH(uint256 _value) internal  {
-        uint256 amountOutMin = _value;
         address[] memory _path;
-
-
         _path[0] = WETH;
         _path[1] = address(alwinToken);
-        IUniswapV2Router02(router).swapExactETHForTokens(amountOutMin, _path, address(this), now + 1200);
+        
+        uint256[] memory amountOutMin = IUniswapV2Router02(router).getAmountsOut(_value, _path);
+        IUniswapV2Router02(router).swapExactETHForTokens{value:_value}(amountOutMin[1], _path, address(this), now + 1200);
     }
 
 
     function swapToken(uint256 _tokenAmount, uint256 _tokenId) internal {
-
         address[] memory _path;
-
-        uint256[] memory amountMinArray = IUniswapV2Router02(router).getAmountsOut(_tokenAmount, _path);
-
         _path[0] = address(controller.getAvailableTokenAddress(_tokenId));
         _path[1] = address(alwinToken);
 
-
+        uint256[] memory amountMinArray = IUniswapV2Router02(router).getAmountsOut(_tokenAmount, _path);
         IUniswapV2Router02(router).swapExactTokensForTokens(_tokenAmount, amountMinArray[1], _path, address(this), now + 1200);
     }
-
 
 }
 
