@@ -1,6 +1,17 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.6.6;
 
 library SafeMath {
+    /**
+     * @dev Returns the addition of two unsigned integers, reverting on
+     * overflow.
+     *
+     * Counterpart to Solidity's `+` operator.
+     *
+     * Requirements:
+     *
+     * - Addition cannot overflow.
+     */
     function add(uint256 a, uint256 b) internal pure returns (uint256) {
         uint256 c = a + b;
         require(c >= a, "SafeMath: addition overflow");
@@ -8,17 +19,140 @@ library SafeMath {
         return c;
     }
 
-
+    /**
+     * @dev Returns the subtraction of two unsigned integers, reverting on
+     * overflow (when the result is negative).
+     *
+     * Counterpart to Solidity's `-` operator.
+     *
+     * Requirements:
+     *
+     * - Subtraction cannot overflow.
+     */
     function sub(uint256 a, uint256 b) internal pure returns (uint256) {
         return sub(a, b, "SafeMath: subtraction overflow");
     }
 
-
-    function sub(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+    /**
+     * @dev Returns the subtraction of two unsigned integers, reverting with custom message on
+     * overflow (when the result is negative).
+     *
+     * Counterpart to Solidity's `-` operator.
+     *
+     * Requirements:
+     *
+     * - Subtraction cannot overflow.
+     */
+    function sub(
+        uint256 a,
+        uint256 b,
+        string memory errorMessage
+    ) internal pure returns (uint256) {
         require(b <= a, errorMessage);
         uint256 c = a - b;
 
         return c;
+    }
+
+    /**
+     * @dev Returns the multiplication of two unsigned integers, reverting on
+     * overflow.
+     *
+     * Counterpart to Solidity's `*` operator.
+     *
+     * Requirements:
+     *
+     * - Multiplication cannot overflow.
+     */
+    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
+        // Gas optimization: this is cheaper than requiring 'a' not being zero, but the
+        // benefit is lost if 'b' is also tested.
+        // See: https://github.com/OpenZeppelin/openzeppelin-contracts/pull/522
+        if (a == 0) {
+            return 0;
+        }
+
+        uint256 c = a * b;
+        require(c / a == b, "SafeMath: multiplication overflow");
+
+        return c;
+    }
+
+    /**
+     * @dev Returns the integer division of two unsigned integers. Reverts on
+     * division by zero. The result is rounded towards zero.
+     *
+     * Counterpart to Solidity's `/` operator. Note: this function uses a
+     * `revert` opcode (which leaves remaining gas untouched) while Solidity
+     * uses an invalid opcode to revert (consuming all remaining gas).
+     *
+     * Requirements:
+     *
+     * - The divisor cannot be zero.
+     */
+    function div(uint256 a, uint256 b) internal pure returns (uint256) {
+        return div(a, b, "SafeMath: division by zero");
+    }
+
+    /**
+     * @dev Returns the integer division of two unsigned integers. Reverts with custom message on
+     * division by zero. The result is rounded towards zero.
+     *
+     * Counterpart to Solidity's `/` operator. Note: this function uses a
+     * `revert` opcode (which leaves remaining gas untouched) while Solidity
+     * uses an invalid opcode to revert (consuming all remaining gas).
+     *
+     * Requirements:
+     *
+     * - The divisor cannot be zero.
+     */
+    function div(
+        uint256 a,
+        uint256 b,
+        string memory errorMessage
+    ) internal pure returns (uint256) {
+        require(b > 0, errorMessage);
+        uint256 c = a / b;
+        // assert(a == b * c + a % b); // There is no case in which this doesn't hold
+
+        return c;
+    }
+
+    /**
+     * @dev Returns the remainder of dividing two unsigned integers. (unsigned integer modulo),
+     * Reverts when dividing by zero.
+     *
+     * Counterpart to Solidity's `%` operator. This function uses a `revert`
+     * opcode (which leaves remaining gas untouched) while Solidity uses an
+     * invalid opcode to revert (consuming all remaining gas).
+     *
+     * Requirements:
+     *
+     * - The divisor cannot be zero.
+     */
+    function mod(uint256 a, uint256 b) internal pure returns (uint256) {
+        return mod(a, b, "SafeMath: modulo by zero");
+    }
+
+    /**
+     * @dev Returns the remainder of dividing two unsigned integers. (unsigned integer modulo),
+     * Reverts with custom message when dividing by zero.
+     *
+     * Counterpart to Solidity's `%` operator. This function uses a `revert`
+     * opcode (which leaves remaining gas untouched) while Solidity uses an
+     * invalid opcode to revert (consuming all remaining gas).
+     *
+     * Requirements:
+     *
+     * - The divisor cannot be zero.
+     */
+    function mod(
+        uint256 a,
+        uint256 b,
+        string memory errorMessage
+    ) internal pure returns (uint256) {
+        require(b != 0, errorMessage);
+        return a % b;
     }
 }
 
@@ -479,25 +613,8 @@ contract Ownable is Context {
     }
 }
 
-contract AllWinValidator is Ownable {
 
-    ERC20 public alwinToken;
-    IERC20[] public availableTokens; // 0 - ETH, 1 - AllWin, 2 -
-    IPriceController public controller;
-
-    function _validatePrice(uint256 _value, uint256 _tokenTd) internal view returns(bool) {
-        if (_value  == ticketPrice.mul(IPriceController.getTokenUSDRate(_tokenTd))) {
-            return true;
-        }
-        else {
-            return false;
-        }
-    }
-
-}
-
-
-contract AllWin is AllwinValidator {
+contract AllWin is Ownable {
     using SafeMath for uint256;
 
     struct User {
@@ -516,7 +633,9 @@ contract AllWin is AllwinValidator {
         uint256 total_structure;
     }
 
-
+    ERC20 public alwinToken;
+    IERC20[] public availableTokens; // 0 - ETH, 1 - AllWin, 2 -
+    IPriceController public controller;
     address payable private admin_fee;
 
     mapping(address => User) public users;
@@ -534,6 +653,7 @@ contract AllWin is AllwinValidator {
     uint256 public total_users = 1;
     uint256 public total_deposited;
     uint256 public total_withdraw;
+    uint256 public minDeposit = 1000;
 
     event Upline(address indexed addr, address indexed upline);
     event NewDeposit(address indexed addr, uint256 amount);
@@ -547,7 +667,6 @@ contract AllWin is AllwinValidator {
                 IPriceController _controller,
                 ERC20 _alwin) public {
         alwinToken = _alwin;
-        owner = msg.sender;
         admin_fee = _admin_fee;
         controller = _controller;
 
@@ -583,30 +702,27 @@ contract AllWin is AllwinValidator {
         pool_bonuses.push(2);
         pool_bonuses.push(1);
 
-        cycles.push(50); // todo 10 - 50 USD
-        cycles.push(15000); // todo 15000 k
-        cycles.push(45000); // todo 45000 k
-        cycles.push(135000); // todo 135000 k
+        cycles.push(5000); // todo 10 - 50 USD
+        cycles.push(1500000); // todo 15000 k
+        cycles.push(4500000); // todo 45000 k
+        cycles.push(13500000); // todo 135000 k
     }
 
 
-    function() payable external {
-        //_validatePrice(msg.value, 0);
-        _deposit(msg.sender, msg.value);
+    receive() payable external {
+        _deposit(msg.sender, msg.value, 0);
     }
 
 
     function depositETH(address _upline) payable public {
-        //_validatePrice(msg.value, 0);
         _setUpline(msg.sender, _upline);
-        _deposit(msg.sender, msg.value);
+        _deposit(msg.sender, msg.value, 0);
     }
 
 
     function depositToken(uint256 _amount, uint256 _id, address _upline) public {
-       // _validatePrice(_amount, _id);
         _setUpline(msg.sender, _upline);
-        _deposit(msg.sender, _amount);
+        _deposit(msg.sender, _amount, _id);
     }
 
 
@@ -678,7 +794,7 @@ contract AllWin is AllwinValidator {
 
 
     function _setUpline(address _addr, address _upline) private {
-        if(users[_addr].upline == address(0) && _upline != _addr && _addr != owner && (users[_upline].deposit_time > 0 || _upline == owner)) {
+        if(users[_addr].upline == address(0) && _upline != _addr && _addr != owner() && (users[_upline].deposit_time > 0 || _upline == owner())) {
             users[_addr].upline = _upline;
             users[_upline].referrals++;
 
@@ -697,24 +813,24 @@ contract AllWin is AllwinValidator {
 
 
     function _deposit(address _addr, uint256 _amount, uint256 _tokenTd) private {
-        require(users[_addr].upline != address(0) || _addr == owner, "No upline");
+        require(users[_addr].upline != address(0) || _addr == owner(), "No upline");
 
         if(users[_addr].deposit_time > 0) {
             users[_addr].cycle++;
 
             require(users[_addr].payouts >= this.maxPayoutOf(users[_addr].deposit_amount), "Deposit already exists");
-            require(_amount >= users[_addr].deposit_amount.mul(IPriceController.getTokenUSDRate(_tokenTd))
-                && _amount <= cycles[users[_addr].cycle.mul(IPriceController.getTokenUSDRate(_tokenTd)) > cycles.length - 1 ? cycles.length - 1 : users[_addr].cycle], "Bad amount");
+            require(_amount >= users[_addr].deposit_amount.mul(controller.getTokenUSDRate(_tokenTd))
+                && _amount <= cycles[users[_addr].cycle.mul(controller.getTokenUSDRate(_tokenTd)) > cycles.length - 1 ? cycles.length - 1 : users[_addr].cycle], "Bad amount");
         }
-        else require(_amount >= (10).mul(IPriceController.getTokenUSDRate(_tokenTd))
-            && _amount <= cycles[0].mul(IPriceController.getTokenUSDRate(_tokenTd)), "Bad amount");
+        else require(_amount >= minDeposit.mul(controller.getTokenUSDRate(_tokenTd))
+            && _amount <= cycles[0].mul(controller.getTokenUSDRate(_tokenTd)), "Bad amount");
 
-        uint256 usdAmount = _amount.div(IPriceController.getTokenUSDRate(_tokenTd));
+        uint256 usdAmount = _amount.div(controller.getTokenUSDRate(_tokenTd));
         users[_addr].payouts = 0;
-        users[_addr].deposit_amount = _amount.div(IPriceController.getTokenUSDRate(_tokenTd));
+        users[_addr].deposit_amount = _amount.div(controller.getTokenUSDRate(_tokenTd));
         users[_addr].deposit_payouts = 0;
         users[_addr].deposit_time = uint40(block.timestamp);
-        users[_addr].total_deposits += _amount.div(IPriceController.getTokenUSDRate(_tokenTd));
+        users[_addr].total_deposits += _amount.div(controller.getTokenUSDRate(_tokenTd));
 
         total_deposited += usdAmount;
 
@@ -733,10 +849,10 @@ contract AllWin is AllwinValidator {
         }
 
         if (_tokenTd == 0) {
-            admin_fee.transfer(IPriceController.getTokenUSDRate(_tokenTd) / 10);
+            admin_fee.transfer(controller.getTokenUSDRate(_tokenTd) / 10);
         }
         else {
-            IPriceController.getAvailableTokenAddress(_tokenTd).transferFrom(address(this), admin_fee, IPriceController.getTokenUSDRate(_tokenTd) / 10);
+            controller.getAvailableTokenAddress(_tokenTd).transferFrom(address(this), admin_fee, controller.getTokenUSDRate(_tokenTd) / 10);
         }
     }
 
@@ -822,17 +938,6 @@ contract AllWin is AllwinValidator {
     }
 
 
-
-    function _validatePrice(uint256 _value, uint256 _tokenTd) internal view returns(bool) {
-        if (_value  == ticketPrice.mul(IPriceController.getTokenUSDRate(_tokenTd))) {
-            return true;
-        }
-        else {
-            return false;
-        }
-    }
-
-
     function maxPayoutOf(uint256 _amount) pure public returns(uint256) {
         return _amount * 40 / 10;
     }
@@ -879,16 +984,8 @@ contract AllWin is AllwinValidator {
 
 
     function getAdmin() public view returns(address){
-        require(msg.sender == owner);
+        require(msg.sender == owner());
         return admin_fee;
     }
 
-    function getAvailableToken(uint2656 _id) public view returns (address) {
-        return availableTokens[_id];
-    }
-
-
-    function addNewToken(IERC20 _newToken) public onlyOwner {
-
-    }
 }
