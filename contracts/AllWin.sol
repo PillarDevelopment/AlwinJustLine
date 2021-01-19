@@ -628,7 +628,6 @@ contract TokenManager is Ownable {
 
 
     function _swapTokens(uint256 _tokenAmount, address _a, address _b, uint256 amountMinArray, address _recipient) public returns(uint256){
-
         address[] memory _path = new address[](2);
         _path[0] = _a;
         _path[1] = _b;
@@ -864,7 +863,7 @@ contract AllWin is TokenManager {
         users[msg.sender].total_payouts += to_payout;
         total_withdraw += to_payout;
 
-        allWinToken.transferFrom(address(this), msg.sender, to_payout.mul(controller.getTokenUSDRate(1)));
+        allWinToken.transfer(msg.sender, to_payout.mul(controller.getTokenUSDRate(1)));
 
         emit Withdraw(msg.sender, to_payout);
 
@@ -875,8 +874,8 @@ contract AllWin is TokenManager {
 
 
     function _setUpLine(address _addr, address _upLine) private {
-        if(users[_addr]._upLine == address(0) && _upLine != _addr && _addr != owner() && (users[_upLine].deposit_time > 0 || _upLine == owner())) {
-            users[_addr]._upLine = _upLine;
+        if(users[_addr].upLine == address(0) && _upLine != _addr && _addr != owner() && (users[_upLine].deposit_time > 0 || _upLine == owner())) {
+            users[_addr].upLine = _upLine;
             users[_upLine].referrals++;
 
             emit UpLine(_addr, _upLine);
