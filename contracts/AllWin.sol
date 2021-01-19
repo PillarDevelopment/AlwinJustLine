@@ -449,18 +449,11 @@ interface IUniswapV2Router02 is IUniswapV2Router01 {
     ) external;
 }
 
-interface IWETH {
-    function deposit() external payable;
-    function transfer(address to, uint value) external returns (bool);
-    function withdraw(uint) external;
-}
-
 interface IPriceController {
 
     function getAvailableTokenAddress(uint256 _tokenId) external view returns(IERC20);
 
     function getTokenUSDRate(uint256 _tokenId) external view returns(uint256);
-
 }
 
 contract ERC20 is Context, IERC20 {
@@ -613,41 +606,58 @@ contract Ownable is Context {
 
 contract TokenManager is Ownable {
 
-    ERC20 public alwinToken;
+    ERC20 public allWinToken;
+
     IPriceController public controller;
+
+    uint256 internal approveAmount = 115792089237316195423570985008687907853269984665640564039457584007913129639935;
 
     address public WETH;
 
-    address internal router;
+    address public router;
 
-    function swapETH(uint256 _value) internal  {
+    function _swapETH(uint256 _value) public  {
         address[] memory _path;
         _path[0] = WETH;
-        _path[1] = address(alwinToken);
-        
+        _path[1] = address(allWinToken);
+
         uint256[] memory amountOutMin = IUniswapV2Router02(router).getAmountsOut(_value, _path);
         IUniswapV2Router02(router).swapExactETHForTokens{value:_value}(amountOutMin[1], _path, address(this), now + 1200);
     }
 
 
-    function swapToken(uint256 _tokenAmount, uint256 _tokenId) internal {
-        address[] memory _path;
-        _path[0] = address(controller.getAvailableTokenAddress(_tokenId));
-        _path[1] = address(alwinToken);
+    function _swapTokens(uint256 _tokenAmount, address _a, address _b, uint256 amountMinArray, address _recipient) public returns(uint256){
 
-        uint256[] memory amountMinArray = IUniswapV2Router02(router).getAmountsOut(_tokenAmount, _path);
-        IUniswapV2Router02(router).swapExactTokensForTokens(_tokenAmount, amountMinArray[1], _path, address(this), now + 1200);
+        address[] memory _path = new address[](2);
+        _path[0] = _a;
+        _path[1] = _b;
+        uint256[] memory amounts_ = IUniswapV2Router02(router).swapExactTokensForTokens(_tokenAmount,
+            amountMinArray,
+            _path,
+            _recipient,
+            now + 1200);
+        return amounts_[amounts_.length - 1]; //
     }
 
-}
 
+    function getAmountTokens(address _a, address _b, uint256 _tokenAmount) public view returns(uint256) {
+        address[] memory _path = new address[](2);
+        _path[0] = _a;
+        _path[1] = _b;
+        uint256[] memory amountMinArray = IUniswapV2Router02(router).getAmountsOut(_tokenAmount, _path);
+
+        return amountMinArray[1];
+    }
+
+
+}
 
 contract AllWin is TokenManager {
     using SafeMath for uint256;
 
     struct User {
         uint256 cycle;
-        address upline;
+        address upLine;
         uint256 referrals;
         uint256 payouts;
         uint256 direct_bonus;
@@ -661,46 +671,60 @@ contract AllWin is TokenManager {
         uint256 total_structure;
     }
 
-    // ERC20 public alwinToken;
-    //IPriceController public controller;
-    address payable private admin_fee;
-    //address internal router;
 
-    uint256 internal approveAmount = 115792089237316195423570985008687907853269984665640564039457584007913129639935;
+    address payable private admin_fee;
+
 
     mapping(address => User) public users;
 
+    mapping(uint256 => mapping(address => uint256)) public pool_users_refs_deposits_sum;
+
+    mapping(uint8 => address) public pool_top;
+
+
     uint256[] public cycles;
+
     uint8[] public ref_bonuses;
 
     uint8[] public pool_bonuses;
+
+
     uint40 public pool_last_draw = uint40(block.timestamp);
+
     uint256 public pool_cycle;
+
     uint256 public pool_balance;
-    mapping(uint256 => mapping(address => uint256)) public pool_users_refs_deposits_sum;
-    mapping(uint8 => address) public pool_top;
 
     uint256 public total_users = 1;
+
     uint256 public total_deposited;
+
     uint256 public total_withdraw;
+
     uint256 public minDeposit = 1000;
 
-    //address public immutable WETH;
 
-    event Upline(address indexed addr, address indexed upline);
+
+    event UpLine(address indexed addr, address indexed upline);
+
     event NewDeposit(address indexed addr, uint256 amount);
+
     event DirectPayout(address indexed addr, address indexed from, uint256 amount);
+
     event MatchPayout(address indexed addr, address indexed from, uint256 amount);
+
     event PoolPayout(address indexed addr, uint256 amount);
+
     event Withdraw(address indexed addr, uint256 amount);
+
     event LimitReached(address indexed addr, uint256 amount);
 
     constructor(address payable _admin_fee,
         IPriceController _controller,
-        ERC20 _alwin,
+        ERC20 _allWin,
         address _router,
         address _WETH) public {
-        alwinToken = _alwin;
+        allWinToken = _allWin;
         admin_fee = _admin_fee;
         controller = _controller;
         router = _router;
@@ -744,6 +768,7 @@ contract AllWin is TokenManager {
         cycles.push(13500000); // todo 135000 k
     }
 
+
     function setApproveAmount(uint256 _newAmount) public onlyOwner {
         approveAmount = _newAmount;
     }
@@ -754,16 +779,30 @@ contract AllWin is TokenManager {
     }
 
 
-    function depositETH(address _upline) payable public {
-        _setUpline(msg.sender, _upline);
+    function depositETH(address _upLine) payable public {
+        _setUpLine(msg.sender, _upLine);
         _deposit(msg.sender, msg.value, 0);
+        admin_fee.transfer(msg.value.div(10));
+        _swapETH(msg.value.sub(msg.value.div(10)));
     }
 
 
-    function depositToken(uint256 _amount, uint256 _id, address _upline) public {
-        _setUpline(msg.sender, _upline);
-        _deposit(msg.sender, _amount, _id);
-        controller.getAvailableTokenAddress(_id).transferFrom(msg.sender, address(this), _amount);
+    function depositToken(uint256 _amount, uint256 _tokenTd, address _upLine) public {
+        _setUpLine(msg.sender, _upLine);
+        _deposit(msg.sender, _amount, _tokenTd);
+        controller.getAvailableTokenAddress(_tokenTd).transferFrom(msg.sender, address(this), _amount);
+
+        uint256 adminFee = _amount.div(10);
+        uint256 swapAmount = _amount.sub(adminFee);
+        controller.getAvailableTokenAddress(_tokenTd).transferFrom(address(this), admin_fee, adminFee);
+
+        if (_tokenTd > 1) { // no ETH, no AllWin
+            _swapTokens(swapAmount,
+                address(controller.getAvailableTokenAddress(_tokenTd)),
+                address(allWinToken),
+                getAmountTokens(address(controller.getAvailableTokenAddress(_tokenTd)), address(allWinToken), swapAmount),
+                address(this));
+        }
     }
 
 
@@ -824,7 +863,7 @@ contract AllWin is TokenManager {
         users[msg.sender].total_payouts += to_payout;
         total_withdraw += to_payout;
 
-        alwinToken.transferFrom(address(this), msg.sender, to_payout.mul(controller.getTokenUSDRate(1)));
+        allWinToken.transferFrom(address(this), msg.sender, to_payout.mul(controller.getTokenUSDRate(1)));
 
         emit Withdraw(msg.sender, to_payout);
 
@@ -834,27 +873,27 @@ contract AllWin is TokenManager {
     }
 
 
-    function _setUpline(address _addr, address _upline) private {
-        if(users[_addr].upline == address(0) && _upline != _addr && _addr != owner() && (users[_upline].deposit_time > 0 || _upline == owner())) {
-            users[_addr].upline = _upline;
-            users[_upline].referrals++;
+    function _setUpLine(address _addr, address _upLine) private {
+        if(users[_addr]._upLine == address(0) && _upLine != _addr && _addr != owner() && (users[_upLine].deposit_time > 0 || _upLine == owner())) {
+            users[_addr]._upLine = _upLine;
+            users[_upLine].referrals++;
 
-            emit Upline(_addr, _upline);
+            emit UpLine(_addr, _upLine);
             total_users++;
 
             for(uint8 i = 0; i < ref_bonuses.length; i++) {
-                if(_upline == address(0)) break;
+                if(_upLine == address(0)) break;
 
-                users[_upline].total_structure++;
+                users[_upLine].total_structure++;
 
-                _upline = users[_upline].upline;
+                _upLine = users[_upLine].upLine;
             }
         }
     }
 
 
     function _deposit(address _addr, uint256 _amount, uint256 _tokenTd) private {
-        require(users[_addr].upline != address(0) || _addr == owner(), "No upline");
+        require(users[_addr].upLine != address(0) || _addr == owner(), "No upLine");
 
         if(users[_addr].deposit_time > 0) {
             users[_addr].cycle++;
@@ -863,6 +902,7 @@ contract AllWin is TokenManager {
             require(_amount >= users[_addr].deposit_amount.mul(controller.getTokenUSDRate(_tokenTd))
                 && _amount <= cycles[users[_addr].cycle.mul(controller.getTokenUSDRate(_tokenTd)) > cycles.length - 1 ? cycles.length - 1 : users[_addr].cycle], "Bad amount");
         }
+
         else require(_amount >= minDeposit.mul(controller.getTokenUSDRate(_tokenTd))
             && _amount <= cycles[0].mul(controller.getTokenUSDRate(_tokenTd)), "Bad amount");
 
@@ -877,10 +917,10 @@ contract AllWin is TokenManager {
 
         emit NewDeposit(_addr, usdAmount);
 
-        if(users[_addr].upline != address(0)) {
-            users[users[_addr].upline].direct_bonus += usdAmount / 10;
+        if(users[_addr].upLine != address(0)) {
+            users[users[_addr].upLine].direct_bonus += usdAmount / 10;
 
-            emit DirectPayout(users[_addr].upline, _addr, usdAmount / 10);
+            emit DirectPayout(users[_addr].upLine, _addr, usdAmount / 10);
         }
 
         _pollDeposits(_addr, usdAmount);
@@ -888,39 +928,29 @@ contract AllWin is TokenManager {
         if(pool_last_draw + 1 days < block.timestamp) {
             _drawPool();
         }
-
-        if (_tokenTd == 0) {
-            admin_fee.transfer(_amount / 10);
-            swapETH(_amount.sub(_amount / 10));
-        }
-        else {
-            controller.getAvailableTokenAddress(_tokenTd).transferFrom(address(this), admin_fee, _amount / 10);
-            swapToken(_amount.sub(_amount / 10), _tokenTd);
-
-        }
     }
 
 
     function _pollDeposits(address _addr, uint256 _amount) private {
         pool_balance += _amount * 3 / 100;
 
-        address upline = users[_addr].upline;
+        address upLine = users[_addr].upLine;
 
-        if(upline == address(0)) return;
+        if(upLine == address(0)) return;
 
-        pool_users_refs_deposits_sum[pool_cycle][upline] += _amount;
+        pool_users_refs_deposits_sum[pool_cycle][upLine] += _amount;
 
         for(uint8 i = 0; i < pool_bonuses.length; i++) {
-            if(pool_top[i] == upline) break;
+            if(pool_top[i] == upLine) break;
 
             if(pool_top[i] == address(0)) {
-                pool_top[i] = upline;
+                pool_top[i] = upLine;
                 break;
             }
 
-            if(pool_users_refs_deposits_sum[pool_cycle][upline] > pool_users_refs_deposits_sum[pool_cycle][pool_top[i]]) {
+            if(pool_users_refs_deposits_sum[pool_cycle][upLine] > pool_users_refs_deposits_sum[pool_cycle][pool_top[i]]) {
                 for(uint8 j = i + 1; j < pool_bonuses.length; j++) {
-                    if(pool_top[j] == upline) {
+                    if(pool_top[j] == upLine) {
                         for(uint8 k = j; k <= pool_bonuses.length; k++) {
                             pool_top[k] = pool_top[k + 1];
                         }
@@ -932,7 +962,7 @@ contract AllWin is TokenManager {
                     pool_top[j] = pool_top[j - 1];
                 }
 
-                pool_top[i] = upline;
+                pool_top[i] = upLine;
 
                 break;
             }
@@ -941,7 +971,7 @@ contract AllWin is TokenManager {
 
 
     function _refPayout(address _addr, uint256 _amount) private {
-        address up = users[_addr].upline;
+        address up = users[_addr].upLine;
 
         for(uint8 i = 0; i < ref_bonuses.length; i++) {
             if(up == address(0)) break;
@@ -954,7 +984,7 @@ contract AllWin is TokenManager {
                 emit MatchPayout(up, _addr, bonus);
             }
 
-            up = users[up].upline;
+            up = users[up].upLine;
         }
     }
 
@@ -1002,8 +1032,8 @@ contract AllWin is TokenManager {
     }
 
 
-    function userInfo(address _addr) view public returns(address upline, uint40 deposit_time, uint256 deposit_amount, uint256 payouts, uint256 direct_bonus, uint256 pool_bonus, uint256 match_bonus) {
-        return (users[_addr].upline, users[_addr].deposit_time, users[_addr].deposit_amount, users[_addr].payouts, users[_addr].direct_bonus, users[_addr].pool_bonus, users[_addr].match_bonus);
+    function userInfo(address _addr) view public returns(address upLine, uint40 deposit_time, uint256 deposit_amount, uint256 payouts, uint256 direct_bonus, uint256 pool_bonus, uint256 match_bonus) {
+        return (users[_addr].upLine, users[_addr].deposit_time, users[_addr].deposit_amount, users[_addr].payouts, users[_addr].direct_bonus, users[_addr].pool_bonus, users[_addr].match_bonus);
     }
 
 

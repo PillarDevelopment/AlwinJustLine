@@ -71,7 +71,6 @@ interface IPriceController {
     function getAvailableTokenAddress(uint256 _tokenId) external view returns(IERC20);
 
     function getTokenUSDRate(uint256 _tokenId) external view returns(uint256);
-
 }
 
 contract PriceController is IPriceController, Ownable {
@@ -87,22 +86,20 @@ contract PriceController is IPriceController, Ownable {
 
     TokenUSDRate[] public tokenUSDRate;
 
-    // 0 - wETH/ethe
-    // 1 - UAllWin
-    // 2 - USDT
-
-
     modifier onlyPriceProvider() {
         require(msg.sender == priceProvider, "PriceProvider: caller is not the priceProvider");
         _;
     }
 
-
-    constructor(IERC20 _allwin, IERC20 _weth) public {
+    // 0 - wETH/ethe
+    // 1 - UAllWin
+    // 2 - USDT
+    // 3 - Other
+    constructor(IERC20 _allWin, IERC20 _weth) public {
         priceProvider = msg.sender;
         allwinToken = _allwin;
         tokenUSDRate.push(TokenUSDRate({token:_weth, usdRate:1e15})); // todo
-        tokenUSDRate.push(TokenUSDRate({token:_allwin, usdRate:1e16})); // todo
+        tokenUSDRate.push(TokenUSDRate({token:_allWin, usdRate:1e16})); // todo
     }
 
 
