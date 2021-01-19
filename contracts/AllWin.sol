@@ -617,11 +617,12 @@ contract TokenManager is Ownable {
     address public router;
 
     function _swapETH(uint256 _value) public  {
-        address[] memory _path;
+        address[] memory _path = new address[](2);
         _path[0] = WETH;
         _path[1] = address(allWinToken);
 
         uint256[] memory amountOutMin = IUniswapV2Router02(router).getAmountsOut(_value, _path);
+
         IUniswapV2Router02(router).swapExactETHForTokens{value:_value}(amountOutMin[1], _path, address(this), now + 1200);
     }
 
