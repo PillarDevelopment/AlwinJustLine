@@ -16,7 +16,6 @@ contract Context {
     }
 }
 
-
 library SafeMath {
     /**
      * @dev Returns the addition of two unsigned integers, reverting on
@@ -159,6 +158,17 @@ library SafeMath {
     }
 }
 
+interface IERC20 {
+    function totalSupply() external view returns (uint256);
+    function balanceOf(address account) external view returns (uint256);
+    function transfer(address recipient, uint256 amount) external returns (bool);
+    function allowance(address owner, address spender) external view returns (uint256);
+    function approve(address spender, uint256 amount) external returns (bool);
+    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
+
+    event Transfer(address indexed from, address indexed to, uint256 value);
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+}
 
 contract PaymentSplitter is Context {
     using SafeMath for uint256;
@@ -173,6 +183,7 @@ contract PaymentSplitter is Context {
     mapping(address => uint256) private _shares;
     mapping(address => uint256) private _released;
     address[] private _payees;
+    IERC20[] public tokens;
 
     /**
      * @dev Creates an instance of `PaymentSplitter` where each account in `payees` is assigned the number of shares at
@@ -181,11 +192,18 @@ contract PaymentSplitter is Context {
      * All addresses in `payees` must be non-zero. Both arrays must have the same non-zero length, and there must be no
      * duplicates in `payees`.
      */
-    constructor (address _first, address _second, address _third, address _fourth) public payable {
-        _addPayee(_first, 10);
-        _addPayee(_second, 10);
-        _addPayee(_third, 10);
-        _addPayee(_fourth, 70);
+    constructor (address _first, address _second, address _third, IERC20 _USDT, IERC20 _AllWin) public payable {
+        _addPayee(_first, 33);
+        _addPayee(_second, 33);
+        _addPayee(_third, 33);
+        _addNewToken(_USDT);
+        _addNewToken(_AllWin);
+    }
+
+
+    function addToken(IERC20 _newToken) public {
+        require(_shares[msg.sender] > 0, "PaymentSplitter: account has no shares");
+        _addNewToken(_newToken);
     }
 
     /**
@@ -208,11 +226,28 @@ contract PaymentSplitter is Context {
         return _totalShares;
     }
 
+
+    function releaseAccTokens() public {
+        for(uint256 i; i < tokens.length; i++) {
+            uint256 totalBalance = tokens[i].balanceOf(address(this));
+            for(uint256 y; y < _payees.length; y++) {
+                uint256 payment = totalBalance.mul(_shares[_payees[y]]).div(_totalShares);
+                tokens[i].transfer(_payees[y],payment);
+            }
+        }
+    }
+
+
     /**
      * @dev Getter for the total amount of Ether already released.
      */
     function totalReleased() public view returns (uint256) {
         return _totalReleased;
+    }
+
+
+    function getAvailableToken(uint256 _tokenId) public view returns(IERC20) {
+        return tokens[_tokenId];
     }
 
     /**
@@ -269,5 +304,9 @@ contract PaymentSplitter is Context {
         _shares[account] = shares_;
         _totalShares = _totalShares.add(shares_);
         emit PayeeAdded(account, shares_);
+    }
+
+    function _addNewToken(IERC20 _newToken) internal {
+        tokens.push(_newToken);
     }
 }

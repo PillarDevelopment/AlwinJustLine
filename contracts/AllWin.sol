@@ -672,8 +672,9 @@ contract AllWin is TokenManager {
     }
 
 
-    address payable private admin_fee;
-
+    address payable private admin_fee;  // 3
+    address payable private promo_fund; // 5
+    address payable private leader_fund; // 3
 
     mapping(address => User) public users;
 
@@ -782,8 +783,11 @@ contract AllWin is TokenManager {
     function depositETH(address _upLine) payable public {
         _setUpLine(msg.sender, _upLine);
         _deposit(msg.sender, msg.value, 0);
-        admin_fee.transfer(msg.value.div(10));
-        _swapETH(msg.value.sub(msg.value.div(10)));
+        admin_fee.transfer(msg.value.mul(3).div(100));
+        promo_fund.transfer(msg.value.div(20));
+        promo_fund.transfer(msg.value.mul(3).div(100));
+
+        _swapETH(msg.value.sub(msg.value.mul(11).div(100)));
     }
 
 
@@ -792,11 +796,16 @@ contract AllWin is TokenManager {
         _deposit(msg.sender, _amount, _tokenTd);
         controller.getAvailableTokenAddress(_tokenTd).transferFrom(msg.sender, address(this), _amount);
 
-        uint256 adminFee = _amount.div(10);
-        uint256 swapAmount = _amount.sub(adminFee);
-        controller.getAvailableTokenAddress(_tokenTd).transferFrom(address(this), admin_fee, adminFee);
+        uint256 adminFee = _amount.mul(3).div(100);
+        uint256 promoFee = _amount.div(20);
+        uint256 leaderFee = _amount.mul(3).div(100);
 
-        if (_tokenTd > 1) { // no ETH, no AllWin
+        uint256 swapAmount = _amount.sub(adminFee.add(promo_fund).add(leaderFee));
+        controller.getAvailableTokenAddress(_tokenTd).transferFrom(address(this), admin_fee, adminFee);
+        controller.getAvailableTokenAddress(_tokenTd).transferFrom(address(this), promoFee, promo_fund);
+        controller.getAvailableTokenAddress(_tokenTd).transferFrom(address(this), leaderFee, leader_fund);
+
+        if (_tokenTd > 1) { // not ETH, not AllWin
             _swapTokens(swapAmount,
                 address(controller.getAvailableTokenAddress(_tokenTd)),
                 address(allWinToken),
