@@ -616,7 +616,7 @@ contract TokenManager is Ownable {
 
     address public router;
 
-    function _swapETH(uint256 _value) public  {
+    function _swapETH(uint256 _value) internal  {
         address[] memory _path = new address[](2);
         _path[0] = WETH;
         _path[1] = address(allWinToken);
@@ -627,7 +627,7 @@ contract TokenManager is Ownable {
     }
 
 
-    function _swapTokens(uint256 _tokenAmount, address _a, address _b, uint256 amountMinArray, address _recipient) public returns(uint256){
+    function _swapTokens(uint256 _tokenAmount, address _a, address _b, uint256 amountMinArray, address _recipient) internal returns(uint256){
         address[] memory _path = new address[](2);
         _path[0] = _a;
         _path[1] = _b;
@@ -640,7 +640,7 @@ contract TokenManager is Ownable {
     }
 
 
-    function getAmountTokens(address _a, address _b, uint256 _tokenAmount) public view returns(uint256) {
+    function getAmountTokens(address _a, address _b, uint256 _tokenAmount) internal view returns(uint256) {
         address[] memory _path = new address[](2);
         _path[0] = _a;
         _path[1] = _b;
