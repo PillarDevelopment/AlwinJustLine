@@ -5,7 +5,7 @@ Rinkeby
 
 [PriceController](https://rinkeby.etherscan.io/address/0xaf2afd9e832ca39dd9d88b7033ccbbb51eb5c141#readContract)
 
-[AllWin Line Main Logic](https://rinkeby.etherscan.io/address/0x4ac324efb4936598ff2dc9bc9ef4f3953cf834b1#code)
+[AllWin Line Main Logic](https://rinkeby.etherscan.io/address/0x23212bc946454e7d88d28e63f26ff9ab49d7528e#code)
 
 
 1) Деплой AllWin

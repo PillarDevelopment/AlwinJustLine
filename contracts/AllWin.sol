@@ -720,16 +720,19 @@ contract AllWin is TokenManager {
 
     event LimitReached(address indexed addr, uint256 amount);
 
-    constructor(address payable _admin_fee,
+    constructor(address payable _admin_fund, address payable _promo_fund, address payable _leader_fund,
         IPriceController _controller,
         ERC20 _allWin,
         address _router,
         address _WETH) public {
         allWinToken = _allWin;
-        admin_fee = _admin_fee;
+        admin_fee = _admin_fund;
         controller = _controller;
         router = _router;
         WETH = _WETH;
+        promo_fund = _promo_fund;
+        leader_fund = _leader_fund;
+
 
         ref_bonuses.push(30);
         ref_bonuses.push(10);
@@ -800,10 +803,10 @@ contract AllWin is TokenManager {
         uint256 promoFee = _amount.div(20);
         uint256 leaderFee = _amount.mul(3).div(100);
 
-        uint256 swapAmount = _amount.sub(adminFee.add(promo_fund).add(leaderFee));
+        uint256 swapAmount = _amount.sub(adminFee.add(promoFee).add(leaderFee));
         controller.getAvailableTokenAddress(_tokenTd).transferFrom(address(this), admin_fee, adminFee);
-        controller.getAvailableTokenAddress(_tokenTd).transferFrom(address(this), promoFee, promo_fund);
-        controller.getAvailableTokenAddress(_tokenTd).transferFrom(address(this), leaderFee, leader_fund);
+        controller.getAvailableTokenAddress(_tokenTd).transferFrom(address(this), promo_fund, promoFee);
+        controller.getAvailableTokenAddress(_tokenTd).transferFrom(address(this), leader_fund, leaderFee);
 
         if (_tokenTd > 1) { // not ETH, not AllWin
             _swapTokens(swapAmount,
