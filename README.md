@@ -66,4 +66,5 @@ Approve -160
 Deploy 575,639
 AddToken - 104000
 Update token - 42*3
-deploy - 
+deploy - 1200000
+105000 - transfer token

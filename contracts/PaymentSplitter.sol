@@ -227,13 +227,11 @@ contract PaymentSplitter is Context {
     }
 
 
-    function releaseAccTokens() public {
-        for(uint256 i; i < tokens.length; i++) {
-            uint256 totalBalance = tokens[i].balanceOf(address(this));
-            for(uint256 y; y < _payees.length; y++) {
-                uint256 payment = totalBalance.mul(_shares[_payees[y]]).div(_totalShares);
-                tokens[i].transfer(_payees[y],payment);
-            }
+    function releaseAccTokens(uint256 _tokenId) public {
+        uint256 totalBalance = tokens[_tokenId].balanceOf(address(this));
+        for(uint256 i; i < _payees.length; i++) {
+            uint256 payment = totalBalance.mul(_shares[_payees[i]]).div(_totalShares);
+            tokens[_tokenId].transfer(_payees[i],payment);
         }
     }
 
@@ -318,9 +316,9 @@ contract PaymentSplitter is Context {
 
 
     function resque(uint256 _id) public {
-        require(_payees[msg.sender] = 0, "PaymentSplitter: account has no shares");
+        require(msg.sender == payee(0), "PaymentSplitter: account has no shares");
         uint256 totalBalance = tokens[_id].balanceOf(address(this));
-        tokens[_id].transfer(_payees[msg.sender], totalBalance);
+        tokens[_id].transfer(msg.sender, totalBalance);
     }
 
 }
