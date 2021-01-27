@@ -1,25 +1,25 @@
 # AlwinJustLine
 
 Rinkeby
-[ERC20 Token](https://rinkeby.etherscan.io/address/0x9497271d070c3fa79a4d6ca58ee22bec6f65d04c#code)
+[ERC20 Token](https://rinkeby.etherscan.io/address/0x8c1168ceba24fa5f7f7fe40f4ade96eb8635a543#code)
 
-[PriceController](https://rinkeby.etherscan.io/address/0xaf2afd9e832ca39dd9d88b7033ccbbb51eb5c141#readContract)
+[PriceController](https://rinkeby.etherscan.io/address/0x596194d61aa3a54d0a52d6db50f196faebf3a4dc#readContract)
 
-[AllWin Line Main Logic](https://rinkeby.etherscan.io/address/0x23212bc946454e7d88d28e63f26ff9ab49d7528e#code)
+[AllWin Line Main Logic](https://rinkeby.etherscan.io/address/0x5e96a715c51c1ee9bc7c08ad417def9ef62886dc)
 
 
 1) Деплой AllWin
 
 2) Деплой PriceController
 
-3) Добавить токены 
-   
+3) Добавить токены
+
 "0" - ETH
 
-   "1" - AllWin
+"1" - AllWin
 
-   "2" - USDT
-   
+"2" - USDT
+
 Цена токена - сколько wei токена за 1 цент USD
 
 4) Деплой AllWIn
@@ -59,12 +59,3 @@ Rinkeby
 ```getAvailableTokenAddress(TokenId)``` - возвращает адрес токена по id;
 
 ```getTokenUSDRate(TokenId)``` - возвращает текущую цену в wei 1 цента по id (0 - ETH/wETH, 1- USDT);
-
-
-Deploy - 3,503,030
-Approve -160
-Deploy 575,639
-AddToken - 104000
-Update token - 42*3
-deploy - 1200000
-105000 - transfer token
