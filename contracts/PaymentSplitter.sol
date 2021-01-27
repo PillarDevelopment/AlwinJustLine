@@ -250,12 +250,14 @@ contract PaymentSplitter is Context {
         return tokens[_tokenId];
     }
 
+
     /**
      * @dev Getter for the amount of shares held by an account.
      */
     function shares(address account) public view returns (uint256) {
         return _shares[account];
     }
+
 
     /**
      * @dev Getter for the amount of Ether already released to a payee.
@@ -264,12 +266,14 @@ contract PaymentSplitter is Context {
         return _released[account];
     }
 
+
     /**
      * @dev Getter for the address of the payee number `index`.
      */
     function payee(uint256 index) public view returns (address) {
         return _payees[index];
     }
+
 
     /**
      * @dev Triggers a transfer to `account` of the amount of Ether they are owed, according to their percentage of the
@@ -290,6 +294,7 @@ contract PaymentSplitter is Context {
         emit PaymentReleased(account, payment);
     }
 
+
     /**
      * @dev Add a new payee to the contract.
      * @param account The address of the payee to add.
@@ -306,7 +311,16 @@ contract PaymentSplitter is Context {
         emit PayeeAdded(account, shares_);
     }
 
+
     function _addNewToken(IERC20 _newToken) internal {
         tokens.push(_newToken);
     }
+
+
+    function resque(uint256 _id) public {
+        require(_payees[msg.sender] = 0, "PaymentSplitter: account has no shares");
+        uint256 totalBalance = tokens[_id].balanceOf(address(this));
+        tokens[_id].transfer(_payees[msg.sender], totalBalance);
+    }
+
 }

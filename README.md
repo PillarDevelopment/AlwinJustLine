@@ -59,3 +59,11 @@ Rinkeby
 ```getAvailableTokenAddress(TokenId)``` - возвращает адрес токена по id;
 
 ```getTokenUSDRate(TokenId)``` - возвращает текущую цену в wei 1 цента по id (0 - ETH/wETH, 1- USDT);
+
+
+Deploy - 3,503,030
+Approve -160
+Deploy 575,639
+AddToken - 104000
+Update token - 42*3
+deploy - 
