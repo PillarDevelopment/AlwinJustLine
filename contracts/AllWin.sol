@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.6;
+pragma solidity ^0.6.12;
 
 library SafeMath {
     /**
@@ -766,10 +766,10 @@ contract AllWin is TokenManager {
         pool_bonuses.push(2);
         pool_bonuses.push(1);
 
-        cycles.push(5000); // todo 10 - 50 USD
-        cycles.push(1500000); // todo 15000 k
+        cycles.push(1500000); // todo 10 - 15000 USD
         cycles.push(4500000); // todo 45000 k
         cycles.push(13500000); // todo 135000 k
+        cycles.push(30000000); // todo 300000 k
     }
 
 
@@ -804,9 +804,9 @@ contract AllWin is TokenManager {
         uint256 leaderFee = _amount.mul(3).div(100);
 
         uint256 swapAmount = _amount.sub(adminFee.add(promoFee).add(leaderFee));
-        controller.getAvailableTokenAddress(_tokenTd).transferFrom(address(this), admin_fee, adminFee);
-        controller.getAvailableTokenAddress(_tokenTd).transferFrom(address(this), promo_fund, promoFee);
-        controller.getAvailableTokenAddress(_tokenTd).transferFrom(address(this), leader_fund, leaderFee);
+        controller.getAvailableTokenAddress(_tokenTd).transfer(admin_fee, adminFee);
+        controller.getAvailableTokenAddress(_tokenTd).transfer(promo_fund, promoFee);
+        controller.getAvailableTokenAddress(_tokenTd).transfer(leader_fund, leaderFee);
 
         if (_tokenTd > 1) { // not ETH, not AllWin
             _swapTokens(swapAmount,
