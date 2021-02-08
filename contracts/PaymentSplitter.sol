@@ -1,9 +1,11 @@
-pragma solidity ^0.5.0;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.6.12;
 
 contract Context {
     // Empty internal constructor, to prevent people from mistakenly deploying
     // an instance of this contract, which should be used via inheritance.
-    constructor () internal { }
+    constructor() internal {}
+
     // solhint-disable-previous-line no-empty-blocks
 
     function _msgSender() internal view returns (address payable) {
@@ -28,7 +30,7 @@ library SafeMath {
      */
     function add(uint256 a, uint256 b) internal pure returns (uint256) {
         uint256 c = a + b;
-        require(c >= a, "SafeMath: addition overflow");
+        require(c >= a, 'SafeMath: addition overflow');
 
         return c;
     }
@@ -43,7 +45,7 @@ library SafeMath {
      * - Subtraction cannot overflow.
      */
     function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-        return sub(a, b, "SafeMath: subtraction overflow");
+        return sub(a, b, 'SafeMath: subtraction overflow');
     }
 
     /**
@@ -57,7 +59,11 @@ library SafeMath {
      *
      * _Available since v2.4.0._
      */
-    function sub(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+    function sub(
+        uint256 a,
+        uint256 b,
+        string memory errorMessage
+    ) internal pure returns (uint256) {
         require(b <= a, errorMessage);
         uint256 c = a - b;
 
@@ -82,7 +88,7 @@ library SafeMath {
         }
 
         uint256 c = a * b;
-        require(c / a == b, "SafeMath: multiplication overflow");
+        require(c / a == b, 'SafeMath: multiplication overflow');
 
         return c;
     }
@@ -99,7 +105,7 @@ library SafeMath {
      * - The divisor cannot be zero.
      */
     function div(uint256 a, uint256 b) internal pure returns (uint256) {
-        return div(a, b, "SafeMath: division by zero");
+        return div(a, b, 'SafeMath: division by zero');
     }
 
     /**
@@ -115,7 +121,11 @@ library SafeMath {
      *
      * _Available since v2.4.0._
      */
-    function div(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+    function div(
+        uint256 a,
+        uint256 b,
+        string memory errorMessage
+    ) internal pure returns (uint256) {
         // Solidity only automatically asserts when dividing by 0
         require(b > 0, errorMessage);
         uint256 c = a / b;
@@ -136,7 +146,7 @@ library SafeMath {
      * - The divisor cannot be zero.
      */
     function mod(uint256 a, uint256 b) internal pure returns (uint256) {
-        return mod(a, b, "SafeMath: modulo by zero");
+        return mod(a, b, 'SafeMath: modulo by zero');
     }
 
     /**
@@ -152,7 +162,11 @@ library SafeMath {
      *
      * _Available since v2.4.0._
      */
-    function mod(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+    function mod(
+        uint256 a,
+        uint256 b,
+        string memory errorMessage
+    ) internal pure returns (uint256) {
         require(b != 0, errorMessage);
         return a % b;
     }
@@ -160,11 +174,20 @@ library SafeMath {
 
 interface IERC20 {
     function totalSupply() external view returns (uint256);
+
     function balanceOf(address account) external view returns (uint256);
+
     function transfer(address recipient, uint256 amount) external returns (bool);
+
     function allowance(address owner, address spender) external view returns (uint256);
+
     function approve(address spender, uint256 amount) external returns (bool);
-    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
+
+    function transferFrom(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) external returns (bool);
 
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
@@ -192,7 +215,13 @@ contract PaymentSplitter is Context {
      * All addresses in `payees` must be non-zero. Both arrays must have the same non-zero length, and there must be no
      * duplicates in `payees`.
      */
-    constructor (address _first, address _second, address _third, IERC20 _USDT, IERC20 _AllWin) public payable {
+    constructor(
+        address _first,
+        address _second,
+        address _third,
+        IERC20 _USDT,
+        IERC20 _AllWin
+    ) public payable {
         _addPayee(_first, 33);
         _addPayee(_second, 33);
         _addPayee(_third, 33);
@@ -200,9 +229,8 @@ contract PaymentSplitter is Context {
         _addNewToken(_AllWin);
     }
 
-
     function addToken(IERC20 _newToken) public {
-        require(_shares[msg.sender] > 0, "PaymentSplitter: account has no shares");
+        require(_shares[msg.sender] > 0, 'PaymentSplitter: account has no shares');
         _addNewToken(_newToken);
     }
 
@@ -215,7 +243,7 @@ contract PaymentSplitter is Context {
      * https://solidity.readthedocs.io/en/latest/contracts.html#fallback-function[fallback
      * functions].
      */
-    function () external payable {
+    receive() external payable {
         emit PaymentReceived(_msgSender(), msg.value);
     }
 
@@ -226,15 +254,13 @@ contract PaymentSplitter is Context {
         return _totalShares;
     }
 
-
     function releaseAccTokens(uint256 _tokenId) public {
         uint256 totalBalance = tokens[_tokenId].balanceOf(address(this));
-        for(uint256 i; i < _payees.length; i++) {
+        for (uint256 i; i < _payees.length; i++) {
             uint256 payment = totalBalance.mul(_shares[_payees[i]]).div(_totalShares);
-            tokens[_tokenId].transfer(_payees[i],payment);
+            tokens[_tokenId].transfer(_payees[i], payment);
         }
     }
-
 
     /**
      * @dev Getter for the total amount of Ether already released.
@@ -243,11 +269,9 @@ contract PaymentSplitter is Context {
         return _totalReleased;
     }
 
-
-    function getAvailableToken(uint256 _tokenId) public view returns(IERC20) {
+    function getAvailableToken(uint256 _tokenId) public view returns (IERC20) {
         return tokens[_tokenId];
     }
-
 
     /**
      * @dev Getter for the amount of shares held by an account.
@@ -256,14 +280,12 @@ contract PaymentSplitter is Context {
         return _shares[account];
     }
 
-
     /**
      * @dev Getter for the amount of Ether already released to a payee.
      */
     function released(address account) public view returns (uint256) {
         return _released[account];
     }
-
 
     /**
      * @dev Getter for the address of the payee number `index`.
@@ -272,18 +294,18 @@ contract PaymentSplitter is Context {
         return _payees[index];
     }
 
-
     /**
      * @dev Triggers a transfer to `account` of the amount of Ether they are owed, according to their percentage of the
      * total shares and their previous withdrawals.
      */
     function release(address payable account) public {
-        require(_shares[account] > 0, "PaymentSplitter: account has no shares");
+        require(_shares[account] > 0, 'PaymentSplitter: account has no shares');
 
         uint256 totalReceived = address(this).balance.add(_totalReleased);
-        uint256 payment = totalReceived.mul(_shares[account]).div(_totalShares).sub(_released[account]);
+        uint256 payment =
+            totalReceived.mul(_shares[account]).div(_totalShares).sub(_released[account]);
 
-        require(payment != 0, "PaymentSplitter: account is not due payment");
+        require(payment != 0, 'PaymentSplitter: account is not due payment');
 
         _released[account] = _released[account].add(payment);
         _totalReleased = _totalReleased.add(payment);
@@ -292,16 +314,15 @@ contract PaymentSplitter is Context {
         emit PaymentReleased(account, payment);
     }
 
-
     /**
      * @dev Add a new payee to the contract.
      * @param account The address of the payee to add.
      * @param shares_ The number of shares owned by the payee.
      */
     function _addPayee(address account, uint256 shares_) private {
-        require(account != address(0), "PaymentSplitter: account is the zero address");
-        require(shares_ > 0, "PaymentSplitter: shares are 0");
-        require(_shares[account] == 0, "PaymentSplitter: account already has shares");
+        require(account != address(0), 'PaymentSplitter: account is the zero address');
+        require(shares_ > 0, 'PaymentSplitter: shares are 0');
+        require(_shares[account] == 0, 'PaymentSplitter: account already has shares');
 
         _payees.push(account);
         _shares[account] = shares_;
@@ -309,16 +330,13 @@ contract PaymentSplitter is Context {
         emit PayeeAdded(account, shares_);
     }
 
-
     function _addNewToken(IERC20 _newToken) internal {
         tokens.push(_newToken);
     }
 
-
     function resque(uint256 _id) public {
-        require(msg.sender == payee(0), "PaymentSplitter: account has no shares");
+        require(msg.sender == payee(0), 'PaymentSplitter: account has no shares');
         uint256 totalBalance = tokens[_id].balanceOf(address(this));
         tokens[_id].transfer(msg.sender, totalBalance);
     }
-
 }
